@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EzMaps - Accessible Navigation</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Fredoka Font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+        body { font-family: 'Fredoka', sans-serif; }
+    </style>
+    <!-- Load Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    
+    <style>
+        /* Custom CSS to enforce full screen and high contrast for accessibility */
+        body, html, #map-container {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            overflow: hidden; /* Prevent body scroll */
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        /* Leaflet popups custom style for better contrast */
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background: #1f2937; /* Darker background */
+            color: #f3f4f6; /* Light text */
+            border-radius: 0.5rem; /* Rounded corners */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        /* Smooth transition for side panels and buttons */
+        .smooth-transition {
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+        /* Style for the debug console */
+        #debug-output {
+            height: 200px;
+            overflow-y: scroll;
+            background-color: #030712;
+            color: #10b981; /* Green text for console feel */
+            padding: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            border-radius: 0.375rem;
+            border: 1px solid #1f2937;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 antialiased">
+
+    <!-- Main Map Container -->
+    <div id="map-container" class="relative">
+        <div id="map"></div>
+
+        <!-- 1. Top Bar: Search and Settings Button -->
+        <div class="absolute top-4 left-4 right-4 z-[1000] flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-4">
+
+            <!-- App Title (Large and Clear) -->
+            <h1 class="text-3xl font-bold text-teal-400 bg-gray-800 p-2 rounded-lg shadow-xl hidden md:block" aria-label="EzMaps Application Title">EzMaps</h1>
+
+            <!-- Search Wrapper for Autocomplete Positioning -->
+            <div id="search-wrapper" class="relative w-full md:max-w-xl">
+                <!-- Search Bar -->
+                <div id="search-box" class="flex w-full bg-white rounded-xl shadow-2xl overflow-hidden ring-4 ring-teal-500/50">
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="Search for a location (e.g., 'Eiffel Tower, Paris')"
+                        class="w-full text-lg p-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-500/0 md:p-3"
+                        aria-label="Location search input"
+                        tabindex="0"
+                    >
+                    <button
+                        id="search-button"
+                        class="bg-teal-600 hover:bg-teal-700 text-white p-4 md:p-3 text-xl font-bold transition duration-150 ease-in-out"
+                        aria-label="Search button"
+                        tabindex="0"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </button>
+                </div>
+                <!-- Autocomplete Results Container -->
+                <div id="autocomplete-results" class="absolute w-full mt-1 bg-white rounded-xl shadow-2xl overflow-hidden z-[1001] text-gray-900 border border-teal-500 hidden">
+                    <!-- Suggestions will be injected here -->
+                </div>
+            </div>
+
+            <!-- Location Button (NEW) -->
+            <button
+                id="locate-me-button"
+                class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl shadow-2xl transition duration-150 ease-in-out ring-4 ring-blue-500/50 absolute top-0 right-16 md:relative md:top-auto md:right-auto md:p-3"
+                aria-label="Find my current location"
+                tabindex="0"
+            >
+                <!-- Location Pin Icon -->
+                <svg class="w-8 h-8 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+
+            <!-- Settings Button -->
+            <button
+                id="settings-toggle"
+                class="absolute top-0 right-0 md:relative md:top-auto md:right-auto bg-gray-800 hover:bg-gray-700 text-teal-400 p-4 rounded-xl shadow-2xl transition duration-150 ease-in-out ring-4 ring-teal-500/50"
+                aria-label="Open settings menu"
+                tabindex="0"
+            >
+                <svg class="w-8 h-8 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+        </div>
+
+        <!-- 2. Settings Panel (Slide-out from right) -->
+        <div id="settings-panel"
+             class="smooth-transition fixed top-0 right-0 h-full w-full md:w-96 bg-gray-900/95 backdrop-blur-sm shadow-2xl p-6 transform translate-x-full z-[1010] flex flex-col space-y-6 overflow-y-auto"
+             aria-modal="true"
+             role="dialog">
+
+            <div class="flex justify-between items-center pb-4 border-b border-teal-700">
+                <h2 class="text-3xl font-extrabold text-teal-400">Settings & Debug</h2>
+                <button id="close-settings" class="text-gray-400 hover:text-white p-2 rounded-full transition text-4xl" aria-label="Close settings menu">
+                    &times;
+                </button>
+            </div>
+
+            <!-- Map View Selector -->
+            <div class="space-y-3">
+                <h3 class="text-xl font-semibold text-teal-300">Map View</h3>
+                <div class="flex space-x-4">
+                    <!-- Street button is initially inactive -->
+                    <button id="set-street" class="view-button bg-gray-700 p-3 rounded-lg text-lg w-1/2 hover:bg-gray-600 transition font-bold" data-view="street">
+                        Street View
+                    </button>
+                    <!-- Satellite button is initially active -->
+                    <button id="set-satellite" class="view-button bg-teal-600 p-3 rounded-lg text-lg w-1/2 hover:bg-teal-700 transition font-bold" data-view="satellite">
+                        Satellite View
+                    </button>
+                </div>
+            </div>
+
+            <!-- Accessibility Controls -->
+            <div class="space-y-3 pt-4 border-t border-gray-700">
+                <h3 class="text-xl font-semibold text-teal-300">Accessibility</h3>
+                <label for="zoom-level" class="block text-lg">Default Zoom Level (Current: <span id="current-zoom">13</span>)</label>
+                <input type="range" id="zoom-level" min="1" max="18" value="13" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-xl ring-2 ring-teal-500/50">
+
+                <div class="pt-4 space-y-2">
+                    <button id="zoom-in" class="bg-teal-600 p-4 rounded-xl text-xl w-full hover:bg-teal-700 transition font-bold">
+                        <span class="text-3xl pr-2">+</span> Zoom In
+                    </button>
+                    <button id="zoom-out" class="bg-teal-600 p-4 rounded-xl text-xl w-full hover:bg-teal-700 transition font-bold">
+                        <span class="text-3xl pr-2">&minus;</span> Zoom Out
+                    </button>
+                </div>
+            </div>
+
+            <!-- Debug Console -->
+            <div class="space-y-3 pt-4 border-t border-gray-700">
+                <h3 class="text-xl font-semibold text-teal-300">Debugging Console</h3>
+                <div id="debug-output" aria-live="polite">
+                    [System] Console initialized.
+                </div>
+                <button id="clear-debug" class="bg-red-700 p-2 rounded-lg text-sm w-full hover:bg-red-800 transition">
+                    Clear Console
+                </button>
+            </div>
+            
+            <!-- Attribution Footer -->
+            <div class="mt-auto pt-6 border-t border-teal-700 text-center">
+                <p class="text-sm text-gray-400">
+                    Made with ❤️ Titus Page and Kayden Sisk at LJHS
+                </p>
+            </div>
+
+        </div>
+
+        <!-- 3. Message/Error Box (Non-Alert Dialog) -->
+        <div id="message-box" class="fixed inset-0 bg-black/70 smooth-transition opacity-0 pointer-events-none z-[1020] flex items-center justify-center">
+            <div id="message-content" class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-sm w-11/12 transform scale-90 smooth-transition text-center border-t-4 border-red-500">
+                <h3 class="text-2xl font-bold text-red-400 mb-4">Error</h3>
+                <p id="message-text" class="text-lg text-gray-200 mb-6"></p>
+                <button id="message-close" class="bg-red-600 hover:bg-red-700 text-white p-3 w-full rounded-lg transition font-bold text-xl">
+                    OK
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Leaflet JS - Removed integrity/crossorigin for max compatibility -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // Global Firebase variables required by the Canvas environment, even if not strictly used for core logic here.
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    // --- Core Map Configuration and Initialization ---
+
+    let map;
+    let currentMarker;
+    let streetLayer;
+    let satelliteLayer;
+    let currentLayer;
+
+    // Tile Providers
+    const TILE_LAYERS = {
+        STREET: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png', 
+        SATELLITE: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    };
+
+    // Initialize Map Function
+    function initMap() {
+        try {
+            // Default to a central location (e.g., London) and default zoom level (13)
+            map = L.map('map', {
+                zoomControl: false, 
+                minZoom: 1,
+                maxZoom: 18
+            }).setView([51.505, -0.09], 13);
+        } catch (e) {
+            logToConsole(`Failed to initialize map: ${e.message}`, "error");
+            showMessageBox("Initialization Error", "The map library failed to load correctly. Please try reloading the page.", "error");
+            return; 
+        }
+
+        // Add custom large Zoom Controls
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Initialize tile layers
+        streetLayer = L.tileLayer(TILE_LAYERS.STREET, {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, tiles courtesy of <a href="https://wikimediafoundation.org/our-work/wikimedia-maps/">Wikimedia Maps</a>'
+        });
+
+        satelliteLayer = L.tileLayer(TILE_LAYERS.SATELLITE, {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 18
+        });
+
+        // Set initial layer to Satellite (User Request)
+        currentLayer = satelliteLayer;
+        currentLayer.addTo(map);
+        logToConsole("Map initialized successfully. Defaulting to Satellite View.", "info");
+
+        // Update zoom level indicator in settings on map change
+        map.on('zoomend', () => {
+            document.getElementById('zoom-level').value = map.getZoom();
+            document.getElementById('current-zoom').textContent = map.getZoom();
+            logToConsole(`Zoom level changed to: ${map.getZoom()}`, "debug");
+        });
+    }
+
+    // --- Utility Functions ---
+
+    /**
+     * Debounce Utility Function to limit function calls
+     */
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    /**
+     * Logs a message to the custom debug console in the settings panel.
+     */
+    function logToConsole(message, type = 'info') {
+        const consoleEl = document.getElementById('debug-output');
+        if (!consoleEl) return; 
+        const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+        let prefix = '';
+        let colorClass = '';
+
+        switch (type) {
+            case 'error':
+                prefix = '[ERROR]';
+                colorClass = 'text-red-400';
+                break;
+            case 'debug':
+                prefix = '[DEBUG]';
+                colorClass = 'text-gray-400';
+                break;
+            case 'info':
+            default:
+                prefix = '[INFO]';
+                colorClass = 'text-teal-400';
+                break;
+        }
+
+        const logEntry = document.createElement('div');
+        logEntry.innerHTML = `<span class="text-white/50">${timestamp}</span> <span class="${colorClass}">${prefix}</span>: ${message}`;
+        consoleEl.prepend(logEntry); 
+        while (consoleEl.children.length > 50) {
+            consoleEl.removeChild(consoleEl.lastChild);
+        }
+    }
+
+    /**
+     * Displays a custom non-alert message box for errors or confirmations.
+     */
+    function showMessageBox(title, message, type = 'error') {
+        const messageBox = document.getElementById('message-box');
+        const messageContent = document.getElementById('message-content');
+        const messageTitle = messageContent.querySelector('h3');
+        const messageText = document.getElementById('message-text');
+        const closeButton = document.getElementById('message-close');
+
+        messageTitle.textContent = title;
+        messageText.textContent = message;
+
+        const borderColor = type === 'error' ? 'border-red-500' : 'border-teal-500';
+        const buttonBg = type === 'error' ? 'bg-red-600 hover:bg-red-700' : 'bg-teal-600 hover:bg-teal-700';
+
+        messageContent.className = `bg-gray-800 p-8 rounded-xl shadow-2xl max-w-sm w-11/12 transform scale-90 smooth-transition text-center border-t-4 ${borderColor}`;
+        closeButton.className = `text-white p-3 w-full rounded-lg transition font-bold text-xl ${buttonBg}`;
+
+        messageBox.classList.remove('opacity-0', 'pointer-events-none');
+        messageContent.classList.remove('scale-90');
+
+        const closeHandler = () => {
+            messageBox.classList.add('opacity-0', 'pointer-events-none');
+            messageContent.classList.add('scale-90');
+            closeButton.removeEventListener('click', closeHandler);
+        };
+
+        closeButton.addEventListener('click', closeHandler);
+        logToConsole(`Message box displayed: ${title} - ${message}`, type);
+    }
+
+    // --- Event Handlers ---
+
+    // Toggle Settings Panel
+    document.getElementById('settings-toggle').addEventListener('click', () => {
+        const panel = document.getElementById('settings-panel');
+        panel.classList.toggle('translate-x-full');
+        panel.setAttribute('aria-hidden', panel.classList.contains('translate-x-full') ? 'true' : 'false');
+        logToConsole("Settings panel toggled.", "debug");
+    });
+    document.getElementById('close-settings').addEventListener('click', () => {
+        document.getElementById('settings-panel').classList.add('translate-x-full');
+        document.getElementById('settings-panel').setAttribute('aria-hidden', 'true');
+    });
+
+    // Map View Switcher
+    document.querySelectorAll('.view-button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            if (!map) return logToConsole("Map is not initialized, cannot switch layer.", "error");
+
+            const newView = e.target.getAttribute('data-view');
+            switchLayer(newView);
+            // Visual feedback for active button
+            document.querySelectorAll('.view-button').forEach(btn => {
+                btn.classList.remove('bg-teal-600', 'hover:bg-teal-700');
+                btn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+            });
+            e.target.classList.add('bg-teal-600', 'hover:bg-teal-700');
+            e.target.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+        });
+    });
+
+    /**
+     * Switches the current map tile layer.
+     * @param {string} view - 'street' or 'satellite'.
+     */
+    function switchLayer(view) {
+        if (currentLayer && map.hasLayer(currentLayer)) {
+            map.removeLayer(currentLayer);
+        }
+
+        if (view === 'street') {
+            currentLayer = streetLayer;
+            logToConsole("Switched to Wikimedia Maps (Street View).", "info");
+        } else if (view === 'satellite') {
+            currentLayer = satelliteLayer;
+            logToConsole("Switched to Satellite View (Esri).", "info");
+        }
+        currentLayer.addTo(map);
+    }
+
+    // Accessibility Zoom Controls
+    document.getElementById('zoom-in').addEventListener('click', () => {
+        if (!map) return logToConsole("Map is not initialized, cannot zoom.", "error");
+        map.zoomIn(1, { animate: true });
+    });
+    document.getElementById('zoom-out').addEventListener('click', () => {
+        if (!map) return logToConsole("Map is not initialized, cannot zoom.", "error");
+        map.zoomOut(1, { animate: true });
+    });
+    document.getElementById('zoom-level').addEventListener('input', (e) => {
+        if (!map) return logToConsole("Map is not initialized, cannot change zoom level.", "error");
+        const newZoom = parseInt(e.target.value, 10);
+        map.setZoom(newZoom, { animate: true });
+    });
+
+    // Debug Console Clear
+    document.getElementById('clear-debug').addEventListener('click', () => {
+        document.getElementById('debug-output').innerHTML = '[System] Console cleared.';
+        logToConsole("Console cleared by user.", "info");
+    });
+
+    // --- Search Functionality (Geocoding via Nominatim) ---
+
+    document.getElementById('search-button').addEventListener('click', () => performSearch());
+    
+    // Keypress listener (only runs final search on 'Enter')
+    document.getElementById('search-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performSearch();
+            document.getElementById('autocomplete-results').classList.add('hidden');
+        }
+    });
+
+    // Handle blur on input to close autocomplete results with a small delay
+    document.getElementById('search-input').addEventListener('blur', () => {
+        setTimeout(() => {
+            document.getElementById('autocomplete-results').classList.add('hidden');
+        }, 200);
+    });
+
+    // Input listener for live autocomplete (debounced). This is what makes it pop up automatically.
+    document.getElementById('search-input').addEventListener('input', debounce(handleSearchInput, 300));
+
+
+    async function handleSearchInput(e) {
+        const query = e.target.value.trim();
+        const resultsContainer = document.getElementById('autocomplete-results');
+        
+        if (query.length < 3) {
+            resultsContainer.innerHTML = '';
+            resultsContainer.classList.add('hidden');
+            return;
+        }
+
+        await fetchAutocompleteSuggestions(query);
+    }
+
+    async function fetchAutocompleteSuggestions(query) {
+        const resultsContainer = document.getElementById('autocomplete-results');
+        // Fetch up to 5 suggestions
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`;
+
+        try {
+            const response = await fetch(nominatimUrl);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+
+            resultsContainer.innerHTML = '';
+
+            if (data && data.length > 0) {
+                data.forEach(result => {
+                    const suggestionEl = document.createElement('div');
+                    suggestionEl.className = 'p-3 cursor-pointer hover:bg-teal-100 text-gray-800 transition duration-100 truncate border-b border-gray-200 last:border-b-0';
+                    suggestionEl.textContent = result.display_name;
+                    
+                    suggestionEl.addEventListener('click', () => {
+                        // Set input value and run the full search function
+                        document.getElementById('search-input').value = result.display_name;
+                        performSearch(result.display_name);
+                        resultsContainer.classList.add('hidden');
+                    });
+
+                    resultsContainer.appendChild(suggestionEl);
+                });
+                resultsContainer.classList.remove('hidden');
+            } else {
+                resultsContainer.classList.add('hidden');
+            }
+            logToConsole(`Fetched ${data.length} autocomplete suggestions.`, "debug");
+
+        } catch (error) {
+            logToConsole(`Autocomplete API Error: ${error.message}`, "error");
+            resultsContainer.classList.add('hidden'); 
+        }
+    }
+
+
+    /**
+     * Executes the final map search and moves the map.
+     * @param {string} [query=null] - The search term (uses input value if null).
+     */
+    async function performSearch(query = null) {
+        if (!map) return logToConsole("Map is not initialized, cannot perform search.", "error");
+        
+        const finalQuery = query || document.getElementById('search-input').value.trim();
+        if (finalQuery.length < 3) {
+            showMessageBox("Input Error", "Please enter a location with at least 3 characters.", "error");
+            return;
+        }
+
+        logToConsole(`Searching for: ${finalQuery}`, "debug");
+
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(finalQuery)}&format=json&limit=1`;
+
+        try {
+            const response = await fetch(nominatimUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+
+            if (data && data.length > 0) {
+                const result = data[0];
+                const lat = parseFloat(result.lat);
+                const lon = parseFloat(result.lon);
+                const displayName = result.display_name;
+
+                // Fly to the new location with smooth animation
+                map.flyTo([lat, lon], 13, {
+                    duration: 1.5
+                });
+
+                // Remove existing marker
+                if (currentMarker) {
+                    map.removeLayer(currentMarker);
+                }
+
+                // Add new marker
+                currentMarker = L.marker([lat, lon]).addTo(map)
+                    .bindPopup(`<b>Found Location:</b><br>${displayName}`)
+                    .openPopup();
+
+                logToConsole(`Search successful. Found: ${displayName}`, "info");
+
+            } else {
+                showMessageBox("Search Failed", `Could not find any location matching "${finalQuery}". Please try a different query.`, "error");
+            }
+
+        } catch (error) {
+            logToConsole(`Search API Error: ${error.message}`, "error");
+            showMessageBox("Connection Error", "Could not connect to the map search service. Please check your network connection.", "error");
+        }
+    }
+
+    // --- Geolocation Functionality (NEW) ---
+
+    /**
+     * Gets the user's current location via Geolocation API and centers the map.
+     */
+    function locateUser() {
+        if (!map) return logToConsole("Map is not initialized, cannot locate user.", "error");
+
+        if (!navigator.geolocation) {
+            showMessageBox("Location Error", "Your browser does not support Geolocation.", "error");
+            logToConsole("Geolocation not supported.", "error");
+            return;
+        }
+
+        logToConsole("Attempting to get user location...", "info");
+        
+        // Use the current map zoom level, or a default of 15 if the map is zoomed very far out
+        const initialZoom = map.getZoom();
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                logToConsole(`Location found: Lat ${lat}, Lon ${lon}`, "info");
+
+                // Determine target zoom: at least 15 for a local view, but don't zoom out if user is already zoomed in
+                const targetZoom = Math.max(initialZoom, 15);
+                
+                map.flyTo([lat, lon], targetZoom, {
+                    duration: 2.0 // Smoother, longer animation
+                });
+
+                // Remove existing marker
+                if (currentMarker) {
+                    map.removeLayer(currentMarker);
+                }
+
+                // Add new location marker
+                currentMarker = L.marker([lat, lon]).addTo(map)
+                    .bindPopup("<b>Your Current Location</b>")
+                    .openPopup();
+            },
+            (error) => {
+                let errorMessage = "Could not retrieve your location.";
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = "Location access denied by the user. Please check your browser settings.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = "Location information is unavailable.";
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = "The request to get user location timed out.";
+                        break;
+                    case error.UNKNOWN_ERROR:
+                        errorMessage = "An unknown error occurred while locating you.";
+                        break;
+                }
+                logToConsole(`Geolocation Error: ${errorMessage} (Code: ${error.code})`, "error");
+                showMessageBox("Location Failed", errorMessage, "error");
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            }
+        );
+    }
+
+    // --- Initial Load ---
+    window.onload = function () {
+        initMap();
+        
+        // Attach listener for the new Locate Me button
+        document.getElementById('locate-me-button').addEventListener('click', locateUser);
+        
+        // CRITICAL FIX: Forces Leaflet to recalculate the map container size with a small delay.
+        setTimeout(() => {
+            if (map) {
+                map.invalidateSize();
+                logToConsole("Map size forcibly validated after 100ms delay. Map should now display correctly.", "info");
+            }
+        }, 100); 
+
+        logToConsole(`App ID: ${appId}`, "debug");
+        logToConsole("EzMaps is fully operational!", "info");
+    };
+
+</script>
+
+</body>
+</html>
