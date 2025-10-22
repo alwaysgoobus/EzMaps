@@ -130,12 +130,12 @@
             <div class="space-y-3">
                 <h3 class="text-xl font-semibold text-teal-300">Map View</h3>
                 <div class="flex space-x-4">
-                    <!-- Street button is initially inactive -->
-                    <button id="set-street" class="view-button bg-gray-700 p-3 rounded-lg text-lg w-1/2 hover:bg-gray-600 transition font-bold" data-view="street">
-                        Street View
+                    <!-- Street button is initially ACTIVE for road/building view -->
+                    <button id="set-street" class="view-button bg-teal-600 p-3 rounded-lg text-lg w-1/2 hover:bg-teal-700 transition font-bold" data-view="street">
+                        Street Map
                     </button>
-                    <!-- Satellite button is initially active -->
-                    <button id="set-satellite" class="view-button bg-teal-600 p-3 rounded-lg text-lg w-1/2 hover:bg-teal-700 transition font-bold" data-view="satellite">
+                    <!-- Satellite button is initially INACTIVE -->
+                    <button id="set-satellite" class="view-button bg-gray-700 p-3 rounded-lg text-lg w-1/2 hover:bg-gray-600 transition font-bold" data-view="satellite">
                         Satellite View
                     </button>
                 </div>
@@ -209,19 +209,20 @@
 
     // Tile Providers
     const TILE_LAYERS = {
-        STREET: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png', 
+        // CHANGED: Switched from Wikimedia to standard OpenStreetMap tiles for better reliability
+        STREET: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', 
         SATELLITE: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
     };
 
     // Initialize Map Function
     function initMap() {
         try {
-            // Default to a central location (e.g., London) and default zoom level (13)
+            // CHANGED: Default to central USA (approx 39.8, -98.5) zoomed out to level 4
             map = L.map('map', {
                 zoomControl: false, 
                 minZoom: 1,
                 maxZoom: 18
-            }).setView([51.505, -0.09], 13);
+            }).setView([39.8, -98.5], 4);
         } catch (e) {
             logToConsole(`Failed to initialize map: ${e.message}`, "error");
             showMessageBox("Initialization Error", "The map library failed to load correctly. Please try reloading the page.", "error");
@@ -233,7 +234,8 @@
 
         // Initialize tile layers
         streetLayer = L.tileLayer(TILE_LAYERS.STREET, {
-            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, tiles courtesy of <a href="https://wikimediafoundation.org/our-work/wikimedia-maps/">Wikimedia Maps</a>'
+            // CHANGED: Updated attribution for standard OSM tiles
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         });
 
         satelliteLayer = L.tileLayer(TILE_LAYERS.SATELLITE, {
@@ -241,10 +243,10 @@
             maxZoom: 18
         });
 
-        // Set initial layer to Satellite (User Request)
-        currentLayer = satelliteLayer;
+        // Set initial layer to STREET view (road/building map) based on user feedback
+        currentLayer = streetLayer;
         currentLayer.addTo(map);
-        logToConsole("Map initialized successfully. Defaulting to Satellite View.", "info");
+        logToConsole("Map initialized successfully. Defaulting to Street View (Road Map).", "info");
 
         // Update zoom level indicator in settings on map change
         map.on('zoomend', () => {
@@ -375,7 +377,7 @@
 
         if (view === 'street') {
             currentLayer = streetLayer;
-            logToConsole("Switched to Wikimedia Maps (Street View).", "info");
+            logToConsole("Switched to OpenStreetMap (Street Map).", "info");
         } else if (view === 'satellite') {
             currentLayer = satelliteLayer;
             logToConsole("Switched to Satellite View (Esri).", "info");
@@ -537,7 +539,7 @@
         }
     }
 
-    // --- Geolocation Functionality (NEW) ---
+    // --- Geolocation Functionality ---
 
     /**
      * Gets the user's current location via Geolocation API and centers the map.
