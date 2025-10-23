@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EzMaps - Accessible Navigation</title>
+    <!-- Add the icon as favicon -->
+    <link rel="icon" href="https://raw.githubusercontent.com/alwaysgoobus/EzMaps/refs/heads/main/Untitled.ico" type="image/x-icon" />
+
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Fredoka Font -->
@@ -14,8 +17,7 @@
     <!-- Load Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossorigin=""/>
-    
+          crossorigin="" />
     <style>
         /* Custom CSS to enforce full screen and high contrast for accessibility */
         body, html, #map-container {
@@ -50,23 +52,26 @@
             border-radius: 0.375rem;
             border: 1px solid #1f2937;
         }
+        /* Make buttons consistent size (height) for 'Locate Me' and Settings toggle */
+        #locate-me-button, #settings-toggle {
+            height: 3rem; /* Same height for consistency */
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 antialiased">
-
     <!-- Main Map Container -->
     <div id="map-container" class="relative">
         <div id="map"></div>
 
-        <!-- 1. Top Bar: Search and Settings Button -->
+        <!-- Top Bar: Search and Buttons -->
         <div class="absolute top-4 left-4 right-4 z-[1000] flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-4">
 
-            <!-- App Title (Large and Clear) -->
+            <!-- App Title -->
             <h1 class="text-3xl font-bold text-teal-400 bg-gray-800 p-2 rounded-lg shadow-xl hidden md:block" aria-label="EzMaps Application Title">EzMaps</h1>
 
-            <!-- Search Wrapper for Autocomplete Positioning -->
+            <!-- Search Wrapper -->
             <div id="search-wrapper" class="relative w-full md:max-w-xl">
-                <!-- Search Bar -->
+                <!-- Search Box -->
                 <div id="search-box" class="flex w-full bg-white rounded-xl shadow-2xl overflow-hidden ring-4 ring-teal-500/50">
                     <input
                         type="text"
@@ -75,23 +80,23 @@
                         class="w-full text-lg p-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-500/0 md:p-3"
                         aria-label="Location search input"
                         tabindex="0"
-                    >
+                    />
                     <button
                         id="search-button"
                         class="bg-teal-600 hover:bg-teal-700 text-white p-4 md:p-3 text-xl font-bold transition duration-150 ease-in-out"
                         aria-label="Search button"
                         tabindex="0"
                     >
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
                     </button>
                 </div>
-                <!-- Autocomplete Results Container -->
-                <div id="autocomplete-results" class="absolute w-full mt-1 bg-white rounded-xl shadow-2xl overflow-hidden z-[1001] text-gray-900 border border-teal-500 hidden">
-                    <!-- Suggestions will be injected here -->
-                </div>
+                <!-- Autocomplete Results -->
+                <div id="autocomplete-results" class="absolute w-full mt-1 bg-white rounded-xl shadow-2xl overflow-hidden z-[1001] text-gray-900 border border-teal-500 hidden"></div>
             </div>
 
-            <!-- Location Button (NEW) -->
+            <!-- Locate Me Button -->
             <button
                 id="locate-me-button"
                 class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl shadow-2xl transition duration-150 ease-in-out ring-4 ring-blue-500/50 absolute top-0 right-16 md:relative md:top-auto md:right-auto md:p-3"
@@ -99,101 +104,82 @@
                 tabindex="0"
             >
                 <!-- Location Pin Icon -->
-                <svg class="w-8 h-8 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <svg class="w-8 h-8 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
             </button>
 
             <!-- Settings Button -->
             <button
                 id="settings-toggle"
-                class="absolute top-0 right-0 md:relative md:top-auto md:right-auto bg-gray-800 hover:bg-gray-700 text-teal-400 p-4 rounded-xl shadow-2xl transition duration-150 ease-in-out ring-4 ring-teal-500/50"
+                class="absolute top-0 right-0 md:relative md:top-auto md:right-auto bg-gray-800 hover:bg-gray-10000 text-teal-400 p-4 rounded-xl shadow-2xl transition duration-150 ease-in-out ring-4 ring-teal-500/50"
                 aria-label="Open settings menu"
                 tabindex="0"
             >
-                <svg class="w-8 h-8 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <svg class="w-8 h-8 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
             </button>
         </div>
 
-        <!-- 2. Settings Panel (Slide-out from right) -->
-        <div id="settings-panel"
-             class="smooth-transition fixed top-0 right-0 h-full w-full md:w-96 bg-gray-900/95 backdrop-blur-sm shadow-2xl p-6 transform translate-x-full z-[1010] flex flex-col space-y-6 overflow-y-auto"
-             aria-modal="true"
-             role="dialog">
-
+        <!-- 2. Settings Panel (slide out) -->
+        <div
+            id="settings-panel"
+            class="smooth-transition fixed top-0 right-0 h-full w-full md:w-96 bg-gray-900/95 backdrop-blur-sm shadow-2xl p-6 transform translate-x-full z-[1010] flex flex-col space-y-6 overflow-y-auto"
+            aria-modal="true"
+            role="dialog"
+        >
             <div class="flex justify-between items-center pb-4 border-b border-teal-700">
                 <h2 class="text-3xl font-extrabold text-teal-400">Settings & Debug</h2>
-                <button id="close-settings" class="text-gray-400 hover:text-white p-2 rounded-full transition text-4xl" aria-label="Close settings menu">
-                    &times;
-                </button>
+                <button id="close-settings" class="text-gray-400 hover:text-white p-2 rounded-full transition text-4xl" aria-label="Close settings menu">&times;</button>
             </div>
-
             <!-- Map View Selector -->
             <div class="space-y-3">
                 <h3 class="text-xl font-semibold text-teal-300">Map View</h3>
                 <div class="flex space-x-4">
-                    <!-- Street button is initially ACTIVE for road/building view -->
-                    <button id="set-street" class="view-button bg-teal-600 p-3 rounded-lg text-lg w-1/2 hover:bg-teal-700 transition font-bold" data-view="street">
-                        Street Map
-                    </button>
-                    <!-- Satellite button is initially INACTIVE -->
-                    <button id="set-satellite" class="view-button bg-gray-700 p-3 rounded-lg text-lg w-1/2 hover:bg-gray-600 transition font-bold" data-view="satellite">
-                        Satellite View
-                    </button>
+                    <!-- Street button initially active -->
+                    <button id="set-street" class="view-button bg-teal-600 p-3 rounded-lg text-lg w-1/2 hover:bg-teal-700 transition font-bold" data-view="street">Street Map</button>
+                    <!-- Satellite button initially inactive -->
+                    <button id="set-satellite" class="view-button bg-gray-700 p-3 rounded-lg text-lg w-1/2 hover:bg-gray-600 transition font-bold" data-view="satellite">Satellite View</button>
                 </div>
             </div>
-
             <!-- Accessibility Controls -->
             <div class="space-y-3 pt-4 border-t border-gray-700">
                 <h3 class="text-xl font-semibold text-teal-300">Accessibility</h3>
                 <label for="zoom-level" class="block text-lg">Default Zoom Level (Current: <span id="current-zoom">13</span>)</label>
-                <input type="range" id="zoom-level" min="1" max="18" value="13" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-xl ring-2 ring-teal-500/50">
-
+                <input type="range" id="zoom-level" min="1" max="18" value="13" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-xl ring-2 ring-teal-500/50" />
                 <div class="pt-4 space-y-2">
-                    <button id="zoom-in" class="bg-teal-600 p-4 rounded-xl text-xl w-full hover:bg-teal-700 transition font-bold">
-                        <span class="text-3xl pr-2">+</span> Zoom In
-                    </button>
-                    <button id="zoom-out" class="bg-teal-600 p-4 rounded-xl text-xl w-full hover:bg-teal-700 transition font-bold">
-                        <span class="text-3xl pr-2">&minus;</span> Zoom Out
-                    </button>
+                    <button id="zoom-in" class="bg-teal-600 p-4 rounded-xl text-xl w-full hover:bg-teal-700 transition font-bold"><span class="text-3xl pr-2">+</span> Zoom In</button>
+                    <button id="zoom-out" class="bg-teal-600 p-4 rounded-xl text-xl w-full hover:bg-teal-700 transition font-bold"><span class="text-3xl pr-2">&minus;</span> Zoom Out</button>
                 </div>
             </div>
-
             <!-- Debug Console -->
             <div class="space-y-3 pt-4 border-t border-gray-700">
                 <h3 class="text-xl font-semibold text-teal-300">Debugging Console</h3>
-                <div id="debug-output" aria-live="polite">
-                    [System] Console initialized.
-                </div>
-                <button id="clear-debug" class="bg-red-700 p-2 rounded-lg text-sm w-full hover:bg-red-800 transition">
-                    Clear Console
-                </button>
+                <div id="debug-output" aria-live="polite">[System] Console initialized.</div>
+                <button id="clear-debug" class="bg-red-700 p-2 rounded-lg text-sm w-full hover:bg-red-800 transition">Clear Console</button>
             </div>
-            
             <!-- Attribution Footer -->
             <div class="mt-auto pt-6 border-t border-teal-700 text-center">
-                <p class="text-sm text-gray-400">
-                    Made with ❤️ Titus Page and Kayden Sisk at LJHS
-                </p>
+                <p class="text-sm text-gray-400">Made with ❤️ Titus Page and Kayden Sisk at LJHS</p>
             </div>
-
         </div>
 
-        <!-- 3. Message/Error Box (Non-Alert Dialog) -->
+        <!-- 3. Message Box -->
         <div id="message-box" class="fixed inset-0 bg-black/70 smooth-transition opacity-0 pointer-events-none z-[1020] flex items-center justify-center">
             <div id="message-content" class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-sm w-11/12 transform scale-90 smooth-transition text-center border-t-4 border-red-500">
                 <h3 class="text-2xl font-bold text-red-400 mb-4">Error</h3>
                 <p id="message-text" class="text-lg text-gray-200 mb-6"></p>
-                <button id="message-close" class="bg-red-600 hover:bg-red-700 text-white p-3 w-full rounded-lg transition font-bold text-xl">
-                    OK
-                </button>
+                <button id="message-close" class="bg-red-600 hover:bg-red-700 text-white p-3 w-full rounded-lg transition font-bold text-xl">OK</button>
             </div>
         </div>
-
     </div>
 
-    <!-- Leaflet JS - Removed integrity/crossorigin for max compatibility -->
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script>
+   <script>
     // Global Firebase variables required by the Canvas environment, even if not strictly used for core logic here.
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
@@ -632,3 +618,6 @@
 
 </body>
 </html>
+
+
+
